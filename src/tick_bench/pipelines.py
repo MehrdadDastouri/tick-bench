@@ -43,8 +43,8 @@ class DuckDBPipeline:
 
     def compute_vwap(self, ticks: pa.Table) -> float:
         query = "SELECT SUM(price * volume) / SUM(volume) AS vwap FROM ticks"
-        result = self.con.sql(query).fetchone()
-        return float(result[0])
+        result = self.con.sql(query).fetchall()
+        return float(result[0][0])
 
     def resample_1s_ohlcv(self, ticks: pa.Table) -> pa.Table:
         query = """
