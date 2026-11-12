@@ -36,20 +36,17 @@ class PolarsPipeline:
 
 
 class DuckDBPipeline:
-    """DuckDB vectorized in-memory relational SQL pipeline."""
+    """DuckDB vectorized in-memory relational SQL pipeline using Arrow replacement scans."""
 
     def __init__(self) -> None:
         self.con = duckdb.connect(":memory:")
 
-    def compute_vwap(self, table: pa.Table) -> float:
-        self.con.register("ticks", table)
+    def compute_vwap(self, ticks: pa.Table) -> float:
         query = "SELECT SUM(price * volume) / SUM(volume) AS vwap FROM ticks"
-        result = self.con.execute(query).fetchone()
-        self.con.unregister("ticks")
+        result = self.con.sql(query).fetchone()
         return float(result[0])
 
-    def resample_1s_ohlcv(self, table: pa.Table) -> pa.Table:
-        self.con.register("ticks", table)
+    def resample_1s_ohlcv(self, ticks: pa.Table) -> pa.Table:
         query = """
             SELECT 
                 (timestamp_ns // 1000000000) AS bar_time_sec,
@@ -63,9 +60,7 @@ class DuckDBPipeline:
             GROUP BY 1
             ORDER BY 1
         """
-        result_table = self.con.execute(query).arrow()
-        self.con.unregister("ticks")
-        return result_table
+        return self.con.sql(query).to_arrow_table()
 
 
 class ArrowComputePipeline:
